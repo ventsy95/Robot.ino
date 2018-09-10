@@ -9,7 +9,8 @@ Servo myservo5;
 Servo myservo6;
 Servo myservo7;
 Servo myservo8;
-//int count = 0;
+String commandArray[30]; 
+int count = 0;
 
 SoftwareSerial wifiSerial(0, 1);      // RX, TX for ESP8266
 
@@ -17,7 +18,6 @@ bool DEBUG = true;   //show more logs
 int responseTime = 10; //communication timeout
 
 void getUp(){
-  //if(count < 1){
     myservo1.attach(8);
     myservo2.attach(9);
     myservo3.attach(2);
@@ -35,10 +35,20 @@ void getUp(){
     myservo7.write(135);
     myservo8.write(45);
     delay(1000);
- // }
- // if(count == 0){
- //   count++;
- // }
+}
+
+void addCommand(String command){
+  if(count<30){
+    commandArray[count++] = command;
+  }
+}
+
+String getCommand(){
+  String cmd = "";
+  if(count>0){
+    cmd = commandArray[--count];
+  }
+  return cmd;
 }
 
 void duck(){
@@ -115,6 +125,7 @@ void moveForward(){
   moveLeg(7, "FORWARD");
   moveLeg(5, "BACK");
   moveLeg(6, "BACK");
+  delay(500);
 }
 
 void moveBackwords(){
@@ -147,6 +158,7 @@ void moveBackwords(){
   moveLeg(7, "BACK");
   moveLeg(5, "FORWARD");
   moveLeg(6, "FORWARD");
+  delay(500);
 }
 
 void moveLeft(){
@@ -179,6 +191,7 @@ void moveLeft(){
   moveLeg(7, "BACK");
   moveLeg(5, "BACK");
   moveLeg(6, "FORWARD");
+  delay(500);
 }
 
 void moveRight(){
@@ -211,6 +224,7 @@ void moveRight(){
   moveLeg(7, "FORWARD");
   moveLeg(5, "FORWARD");
   moveLeg(6, "BACK");
+  delay(500);
 }
 
 void liftLeg(int pin){
@@ -261,6 +275,27 @@ void moveLeg(int pin, String direction){
       }
     }
   }
+}
+
+void returnToStart(){
+    for (int i = 0; i < sizeof(commandArray); i++){
+      String command = String(getCommand());
+      if(command){
+        if(command.equals("LEFT")){
+          moveRight();
+        } else if(command.equals("RIGHT")){
+          moveLeft();
+        } else if(command.equals("FORWARD")){
+          moveBackwords();
+        } else if(command.equals("BACK")){
+          moveForward();
+        } else if(command.equals("WAVE")){
+          wave();
+        } else if(command.equals("DUCK")){
+          duck();
+        }
+       }
+    }
 }
 
 /*
@@ -433,17 +468,25 @@ void loop()
         sendData("\nErrRead");               //At command ERROR CODE for Failed Executing statement
     }else
     if(find(message,"LEFT")){  //receives LEFT from wifi
+        addCommand("LEFT");
         moveLeft(); //Robot moves LEFT
     }else if(find(message,"RIGHT")){
+        addCommand("RIGHT");
         moveRight();
     }else if(find(message,"FORWARD")){
+        addCommand("FORWARD");
         moveForward();
     }else if(find(message,"BACK")){
+        addCommand("BACK");
         moveBackwords();
     }else if(find(message,"WAVE")){
+        addCommand("WAVE");
         wave();
     }else if(find(message,"DUCK")){
+        addCommand("DUCK");
         duck();
+    }else if(find(message,"6")){
+        returnToStart();
     }else{
       sendData("\nErrRead");                 //Command ERROR CODE for UNABLE TO READ
     }
