@@ -1,5 +1,17 @@
 #include <Servo.h> 
 #include <SoftwareSerial.h>
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+  #include <avr/power.h>
+#endif
+#define PIN            12
+#define NUMPIXELS      16
+
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+int delayval = 500;
+
+const int pResistor = A0; 
+int sensorValue;  
 
 Servo myservo1;
 Servo myservo2;
@@ -298,6 +310,22 @@ void returnToStart(){
     }
 }
 
+void ledOn(){
+    for(int i=0;i<NUMPIXELS;i++){
+      pixels.setPixelColor(i, pixels.Color(255,255,255));
+      pixels.show();
+      delay(delayval);
+    }
+}
+
+void ledOff(){
+    for(int i=0;i<NUMPIXELS;i++){
+      pixels.setPixelColor(i, pixels.Color(0,0,0));
+      pixels.show();
+      delay(delayval);
+    }
+}
+
 /*
 * Name: sendData
 * Description: Function used to send string to tcp client using cipsend
@@ -425,6 +453,12 @@ String sendToUno(String command, const int timeout, boolean debug){
 
 void setup()
 {
+  pinMode(pResistor, INPUT);
+  #if defined (__AVR_ATtiny85__)
+    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
+  #endif
+  pixels.begin(); 
+  
   getUp();
   delay(2000);
   // Open serial communications and wait for port to open esp8266:
@@ -446,6 +480,14 @@ void setup()
 
 void loop()
 {
+  sensorValue = analogRead(pResistor);
+  if (sensorValue > 250){
+    ledOff();  
+  }
+  else{
+    ledOn(); 
+  } 
+
   if(Serial.available()>0){
      String message = readSerialMessage();
     if(find(message,"debugEsp8266:")){
@@ -485,6 +527,10 @@ void loop()
     }else if(find(message,"DUCK")){
         addCommand("DUCK");
         duck();
+    }else if(find(message,"LEDOFF")){
+        ledOff();
+    }else if(find(message,"LEDON")){
+        ledOn();
     }else if(find(message,"6")){
         returnToStart();
     }else{
